@@ -21,12 +21,14 @@ describe("ConfigMarkdown: normal template", () => {
   Also shouldn't forget @/absolute/paths.txt with and @/without/extensions,
   as well as @~/home-files and @~/paths/under/home.txt.
 
-  If the reference is \`@quoted/in/backticks\` then it shouldn't match at all.`
+  If the reference is \`@quoted/in/backticks\` then it shouldn't match at all.
+
+  Line ranges: @file.ts:10, @file.ts:10-20, @nested/file.ts:5-15 shouldn't change base paths.`
 
   const matches = ConfigMarkdown.files(template)
 
-  test("should extract exactly 12 file references", () => {
-    expect(matches.length).toBe(12)
+  test("should extract exactly 15 file references including line ranges", () => {
+    expect(matches.length).toBe(15)
   })
 
   test("should extract valid/path/to/a/file", () => {
@@ -87,6 +89,27 @@ describe("ConfigMarkdown: normal template", () => {
     const emailTest = "Contact user@example.com for help"
     const emailMatches = ConfigMarkdown.files(emailTest)
     expect(emailMatches.length).toBe(0)
+  })
+
+  test("should match file path with single line", () => {
+    const lineTemplate = "@file.ts:10"
+    const lineMatches = ConfigMarkdown.files(lineTemplate)
+    expect(lineMatches.length).toBe(1)
+    expect(lineMatches[0][1]).toBe("file.ts:10")
+  })
+
+  test("should match file path with line range", () => {
+    const rangeTemplate = "@file.ts:10-20"
+    const rangeMatches = ConfigMarkdown.files(rangeTemplate)
+    expect(rangeMatches.length).toBe(1)
+    expect(rangeMatches[0][1]).toBe("file.ts:10-20")
+  })
+
+  test("should match nested file path with line range", () => {
+    const nestedTemplate = "@nested/file.ts:5-15"
+    const nestedMatches = ConfigMarkdown.files(nestedTemplate)
+    expect(nestedMatches.length).toBe(1)
+    expect(nestedMatches[0][1]).toBe("nested/file.ts:5-15")
   })
 })
 
