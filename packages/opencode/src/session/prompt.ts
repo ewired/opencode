@@ -125,13 +125,15 @@ export namespace SessionPrompt {
             const name = match[1]
             if (seen.has(name)) return
             seen.add(name)
-            const filepath = name.startsWith("~/")
-              ? path.join(os.homedir(), name.slice(2))
-              : path.resolve(ctx.worktree, name)
+            const lineMatch = name.match(/^(.*?)[:#](\d+)(?:-(\d+))?$/)
+            const baseName = lineMatch ? lineMatch[1] : name
+            const filepath = baseName.startsWith("~/")
+              ? path.join(os.homedir(), baseName.slice(2))
+              : path.resolve(ctx.worktree, baseName)
 
             const info = yield* fsys.stat(filepath).pipe(Effect.option)
             if (Option.isNone(info)) {
-              const found = yield* agents.get(name)
+              const found = yield* agents.get(baseName)
               if (found) {
                 parts.push({
                   type: "agent" as const,
@@ -146,14 +148,27 @@ export namespace SessionPrompt {
               return
             }
             const stat = info.value
+            const mime = stat.type === "Directory" ? "application/x-directory" : "text/plain"
+            const url = pathToFileURL(filepath)
+            if (mime === "text/plain" && lineMatch) {
+              const startLine = Number(lineMatch[2])
+              const endLine = lineMatch[3] ? Number(lineMatch[3]) : undefined
+
+              if (!Number.isNaN(startLine)) {
+                url.searchParams.set("start", String(startLine))
+                if (endLine !== undefined && !Number.isNaN(endLine)) {
+                  url.searchParams.set("end", String(endLine))
+                }
+              }
+            }
             parts.push({
               type: "file" as const,
-              mime: stat.type === "Directory" ? "application/x-directory" : "text/plain",
+              mime,
               filename: name,
-              url: pathToFileURL(filepath).href,
+              url: url.toString(),
               source: {
                 type: "file" as const,
-                path: name,
+                path: baseName,
                 text: {
                   start: match.index!,
                   end: match.index! + match[0].length,
