@@ -23,7 +23,7 @@ describe("ConfigMarkdown: normal template", () => {
 
   If the reference is \`@quoted/in/backticks\` then it shouldn't match at all.
 
-  Line ranges: @file.ts:10, @file.ts:10-20, @nested/file.ts:5-15 shouldn't change base paths.`
+  Line ranges: @file.ts#10, @file.ts#10-20, @nested/file.ts#5-15 shouldn't change base paths.`
 
   const matches = ConfigMarkdown.files(template)
 
@@ -92,6 +92,13 @@ describe("ConfigMarkdown: normal template", () => {
   })
 
   test("should match file path with single line", () => {
+    const lineTemplate = "@file.ts#10"
+    const lineMatches = ConfigMarkdown.files(lineTemplate)
+    expect(lineMatches.length).toBe(1)
+    expect(lineMatches[0][1]).toBe("file.ts#10")
+  })
+
+  test("should match file path with single line using colon", () => {
     const lineTemplate = "@file.ts:10"
     const lineMatches = ConfigMarkdown.files(lineTemplate)
     expect(lineMatches.length).toBe(1)
@@ -99,6 +106,13 @@ describe("ConfigMarkdown: normal template", () => {
   })
 
   test("should match file path with line range", () => {
+    const rangeTemplate = "@file.ts#10-20"
+    const rangeMatches = ConfigMarkdown.files(rangeTemplate)
+    expect(rangeMatches.length).toBe(1)
+    expect(rangeMatches[0][1]).toBe("file.ts#10-20")
+  })
+
+  test("should match file path with line range using colon", () => {
     const rangeTemplate = "@file.ts:10-20"
     const rangeMatches = ConfigMarkdown.files(rangeTemplate)
     expect(rangeMatches.length).toBe(1)
@@ -106,6 +120,13 @@ describe("ConfigMarkdown: normal template", () => {
   })
 
   test("should match nested file path with line range", () => {
+    const nestedTemplate = "@nested/file.ts#5-15"
+    const nestedMatches = ConfigMarkdown.files(nestedTemplate)
+    expect(nestedMatches.length).toBe(1)
+    expect(nestedMatches[0][1]).toBe("nested/file.ts#5-15")
+  })
+
+  test("should match nested file path with line range using colon", () => {
     const nestedTemplate = "@nested/file.ts:5-15"
     const nestedMatches = ConfigMarkdown.files(nestedTemplate)
     expect(nestedMatches.length).toBe(1)
