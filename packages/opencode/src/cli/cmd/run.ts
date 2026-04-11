@@ -28,6 +28,26 @@ import { BashTool } from "../../tool/bash"
 import { TodoWriteTool } from "../../tool/todo"
 import { Locale } from "../../util/locale"
 
+function extractFileLineRange(input: string) {
+  const colonIndex = input.lastIndexOf(":")
+  if (colonIndex === -1) return { filePath: input }
+
+  const potentialPath = input.substring(0, colonIndex)
+  const linePart = input.substring(colonIndex + 1)
+  const lineMatch = linePart.match(/^(\d+)(?:-(\d*))?$/)
+
+  if (!lineMatch) return { filePath: input }
+
+  const startLine = Number(lineMatch[1])
+  const endLine = lineMatch[2] && startLine < Number(lineMatch[2]) ? Number(lineMatch[2]) : undefined
+
+  return {
+    filePath: potentialPath,
+    startLine,
+    endLine,
+  }
+}
+
 type ToolProps<T> = {
   input: Tool.InferParameters<T>
   metadata: Tool.InferMetadata<T>
@@ -330,17 +350,27 @@ export const RunCommand = cmd({
       const list = Array.isArray(args.file) ? args.file : [args.file]
 
       for (const filePath of list) {
-        const resolvedPath = path.resolve(process.cwd(), filePath)
+        const givenPath = path.resolve(process.cwd(), filePath)
+        const givenExists = await Filesystem.exists(givenPath)
+        const extracted = givenExists ? undefined : extractFileLineRange(filePath)
+        const resolvedPath = extracted ? path.resolve(process.cwd(), extracted.filePath) : givenPath
+
         if (!(await Filesystem.exists(resolvedPath))) {
           UI.error(`File not found: ${filePath}`)
           process.exit(1)
+        }
+
+        const urlObj = pathToFileURL(resolvedPath)
+        if (extracted?.startLine !== undefined) {
+          urlObj.searchParams.set("start", String(extracted.startLine))
+          if (extracted.endLine !== undefined) urlObj.searchParams.set("end", String(extracted.endLine))
         }
 
         const mime = (await Filesystem.isDir(resolvedPath)) ? "application/x-directory" : "text/plain"
 
         files.push({
           type: "file",
-          url: pathToFileURL(resolvedPath).href,
+          url: urlObj.href,
           filename: path.basename(resolvedPath),
           mime,
         })
